@@ -4,19 +4,43 @@ const ctx = canvas.getContext("2d");
 
 const tileSize = 40; // Each cell size
 
-// Maze grid (0 = path, 1 = wall)
-const maze = [ 
-    [1,1,1,1,1,1,1,1,1,1,1,1,1],
-    [1,0,1,0,1,0,1,0,0,0,0,0,1],
-    [1,0,1,0,0,0,1,0,1,1,1,0,1],
-    [1,0,0,0,1,1,1,0,0,0,0,0,1],
-    [1,0,1,0,0,0,0,0,1,1,1,0,1],
-    [1,0,1,0,1,1,1,0,1,0,0,0,1],
-    [1,0,1,0,1,0,0,0,1,1,1,0,1],
-    [1,0,1,0,1,1,1,0,1,0,1,0,1],
-    [1,0,0,0,0,0,0,0,0,0,1,0,1],
-    [1,1,1,1,1,1,1,1,1,1,1,1,1]
-];
+const rows = 10;
+const cols = 13;
+const maze = Array.from({ length: rows }, () => Array(cols).fill(1));
+
+function generateMaze(x, y) {
+    maze[y][x] = 0; // Mark as visited
+
+    const directions = [
+        { dx: 1, dy: 0 },  // right
+        { dx: -1, dy: 0 }, // left
+        { dx: 0, dy: 1 },  // down
+        { dx: 0, dy: -1 }  // up
+    ];
+
+    shuffleArray(directions);
+
+    directions.forEach(({ dx, dy }) => {
+        const nx = x + 2 * dx;
+        const ny = y + 2 * dy;
+
+        if (nx >= 0 && nx < cols && ny >= 0 && ny < rows && maze[ny][nx] === 1) {
+            maze[ny][nx] = 0; // Connect cells
+            maze[y + dy][x + dx] = 0;
+            generateMaze(nx, ny);
+        }
+    });
+}
+
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+maze[0][0] = 0; // Starting point
+generateMaze(0, 0);
 
 // Set canvas dimensions based on maze size
 canvas.width = maze[0].length * tileSize;
