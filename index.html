@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maze Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #000; /* Dark background */
+            font-family: 'Arial', sans-serif;
+        }
+        
+        canvas {
+            background: rgba(255, 255, 255, 0.1); /* Slightly transparent canvas background */
+            border: 4px solid #333;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.8); /* Green glowing border */
+            display: none; /* Hide canvas initially */
+            animation: pulse 2s infinite;
+        }
+
+        h1 {
+            position: absolute;
+            top: 20px;
+            text-align: center;
+            width: 100%;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+            margin: 0;
+            padding: 10px;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 15px rgba(0, 255, 0, 0.8);
+            }
+            50% {
+                box-shadow: 0 0 25px rgba(0, 255, 0, 1);
+            }
+            100% {
+                box-shadow: 0 0 15px rgba(0, 255, 0, 0.8);
+            }
+        }
+
+        #startButton {
+            font-size: 20px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        #timer {
+            color: #fff;
+            font-size: 24px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Maze Game</h1>
+    <button id="startButton">Start</button>
+    <canvas id="gameCanvas"></canvas>
+    <div id="timer">Time: 0.00 seconds</div>
+
+    <script>
+        // Get canvas and context
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const timerElement = document.getElementById("timer");
+
+        const tileSize = 40; // Each cell size
+
+        // Maze grid (0 = path, 1 = wall)
+        const maze = [ 
+            [1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,1,0,1,0,1,0,0,0,0,0,1],
+            [1,0,1,0,0,0,1,0,1,1,1,0,1],
+            [1,0,0,0,1,1,1,0,0,0,0,0,1],
+            [1,0,1,0,0,0,0,0,1,1,1,0,1],
+            [1,0,1,0,1,1,1,0,1,0,0,0,1],
+            [1,0,1,0,1,0,0,0,1,1,1,0,1],
+            [1,0,1,0,1,1,1,0,1,0,1,0,1],
+            [1,0,0,0,0,0,0,0,0,0,1,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1]
+        ];
+
+        // Set canvas dimensions based on maze size
+        canvas.width = maze[0].length * tileSize;
+        canvas.height = maze.length * tileSize;
+
+        let timer;
+        let startTime;
+
+        // Function to find a random path point
+        function findRandomPathPoint() {
+            let x, y;
+            do {
+                x = Math.floor(Math.random() * maze[0].length);
+                y = Math.floor(Math.random() * maze.length);
+            } while (maze[y][x] !== 0);
+            return { x, y };
+        }
+
+        // Randomly select starting and ending points
+        const startPoint = findRandomPathPoint();
+        const endPoint = findRandomPathPoint();
+
+        // Player object
+        const player = {
+            x: startPoint.x, // Start position
+            y: startPoint.y,
+            size: tileSize / 2, // Smaller than tile for movement
+            draw() {
+                ctx.fillStyle = "red";
+                ctx.beginPath();
+                ctx.arc(
+                    this.x * tileSize + tileSize / 2,
+                    this.y * tileSize + tileSize / 2,
+                    this.size / 2,
+                    0,
+                    Math.PI * 2
+                );
+                ctx.fill();
+            },
+            move(dx, dy) {
+                if (maze[this.y + dy][this.x + dx] === 0) {
+                    this.x += dx;
+                    this.y += dy;
+                    // Check if player has reached the end point
+                    if (this.x === endPoint.x && this.y === endPoint.y) {
+                        clearInterval(timer);
+                        alert("Congratulations! You reached the end point.");
+                    }
+                }
+            }
+        };
+
+        // Draw the maze
+        function drawMaze() {
+            ctx.lineWidth = 2;
+
+            for (let row = 0; row < maze.length; row++) {
+                for (let col = 0; col < maze[row].length; col++) {
+                    if (maze[row][col] === 1) {
+                        ctx.strokeStyle = "rgba(0, 255, 0, 1)"; // Bright green lines
+                        ctx.fillStyle = "rgba(0, 255, 0, 0.8)"; // Fill green with some transparency
+                        ctx.shadowColor = "rgba(0, 255, 0, 0.8)"; // Glowing green shadow
+                        ctx.shadowBlur = 10;
+
+                        // Fill the wall block
+                        ctx.fillRect(col * tileSize, row * tileSize, tileSize, tileSize);
+
+                        // Draw the borders inside the filled area
+                        ctx.beginPath();
+                        ctx.moveTo(col * tileSize + ctx.lineWidth, row * tileSize + ctx.lineWidth);
+                        ctx.lineTo((col + 1) * tileSize - ctx.lineWidth, row * tileSize + ctx.lineWidth);
+                        ctx.lineTo((col + 1) * tileSize - ctx.lineWidth, (row + 1) * tileSize - ctx.lineWidth);
+                        ctx.lineTo(col * tileSize + ctx.lineWidth, (row + 1) * tileSize - ctx.lineWidth);
+                        ctx.closePath();
+                        ctx.stroke();
+                    } else {
+                        ctx.fillStyle = "black"; // Dark path
+                        ctx.shadowBlur = 0; // Remove shadow effect
+                        ctx.fillRect(col * tileSize, row * tileSize, tileSize, tileSize);
+                    }
+                }
+            }
+
+            // Draw the ending point
+            ctx.fillStyle = "white";
+            ctx.beginPath();
+            ctx.arc(
+                endPoint.x * tileSize + tileSize / 2,
+                endPoint.y * tileSize + tileSize / 2,
+                tileSize / 2,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
+        }
+
+        // Handle keyboard input
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "ArrowUp") player.move(0, -1);
+            if (event.key === "ArrowDown") player.move(0, 1);
+            if (event.key === "ArrowLeft") player.move(-1, 0);
+            if (event.key === "ArrowRight") player.move(1, 0);
+        });
+
+        // Game loop
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawMaze();
+            player.draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start button click event
+        document.getElementById("startButton").addEventListener("click", () => {
+            document.getElementById("startButton").style.display = "none"; // Hide the start button
+            canvas.style.display = "block"; // Show the canvas
+            startTime = Date.now();
+            timer = setInterval(() => {
+                const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
+                timerElement.textContent = `Time: ${elapsedTime} seconds`;
+            }, 100);
+            gameLoop(); // Start the game loop
+        });
+    </script>
+</body>
+</html>
